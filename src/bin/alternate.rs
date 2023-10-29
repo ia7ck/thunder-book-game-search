@@ -222,9 +222,10 @@ fn play(
     let mut rng = SmallRng::seed_from_u64(seed);
     let mut win = [0, 0];
     for _ in 0..games {
+        let state = AlternateMazeState::new(h, w, end_turn, &mut rng);
         // alice先手、後手を両方プレイ
         for i in [0, 1] {
-            let mut state = AlternateMazeState::new(h, w, end_turn, &mut rng);
+            let mut state = state.clone();
             loop {
                 if let Some(status) = state.winning_status() {
                     match status {
