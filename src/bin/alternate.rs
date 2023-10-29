@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    time::{Duration, Instant},
+};
 
 use rand::{rngs::SmallRng, seq::IteratorRandom, thread_rng, Rng, SeedableRng};
 
@@ -179,6 +182,24 @@ impl fmt::Debug for AlternateMazeState {
     }
 }
 
+struct TimeKeeper {
+    instant: Instant,
+    threshold: Duration,
+}
+
+impl TimeKeeper {
+    fn new(threshold: Duration) -> Self {
+        Self {
+            instant: Instant::now(),
+            threshold,
+        }
+    }
+
+    fn time_over(&self) -> bool {
+        self.instant.elapsed() >= self.threshold
+    }
+}
+
 fn random_action(state: &AlternateMazeState) -> Action {
     let mut legal_actions = state.legal_actions();
     let mut rng = thread_rng();
@@ -219,7 +240,11 @@ fn mini_max_action(state: &AlternateMazeState, depth: u32) -> Action {
     }
 }
 
-fn alpha_beta_action(state: &AlternateMazeState, depth: u32) -> Action {
+fn alpha_beta_action(
+    state: &AlternateMazeState,
+    depth: u32,
+    time_keeper: &TimeKeeper,
+) -> Option<Action> {
     #[derive(Clone, Copy)]
     enum SearchResult {
         Score(i16),
@@ -244,21 +269,28 @@ fn alpha_beta_action(state: &AlternateMazeState, depth: u32) -> Action {
         alpha: SearchResult,
         beta: SearchResult,
         d: u32,
-    ) -> SearchResult {
+        t: &TimeKeeper,
+    ) -> Option<SearchResult> {
+        if t.time_over() {
+            return None;
+        }
         if s.done() || d == 0 {
-            return SearchResult::Score(s.score());
+            return Some(SearchResult::Score(s.score()));
         }
         let legal_actions = s.legal_actions();
         if legal_actions.is_empty() {
-            return SearchResult::Score(s.score());
+            return Some(SearchResult::Score(s.score()));
         }
         let mut alpha = alpha;
         for action in legal_actions {
             let mut next_s = s.clone();
             next_s.advance(action);
-            let score = search(&next_s, beta.neg(), alpha.neg(), d - 1)
+            let score = search(&next_s, beta.neg(), alpha.neg(), d - 1, t)?
                 .neg()
                 .score();
+            if t.time_over() {
+                return None;
+            }
             let score_and_action = SearchResult::ScoreAndAction(score, action);
             alpha = match alpha {
                 SearchResult::Score(_) => score_and_action,
@@ -270,17 +302,30 @@ fn alpha_beta_action(state: &AlternateMazeState, depth: u32) -> Action {
             // このノードのスコアはalpha.score()以上が確定している
             // これ以上探索してもbeta.score()を更新できないので枝刈り
             if alpha.score() >= beta.score() {
-                return alpha;
+                return Some(alpha);
             }
         }
-        alpha
+        Some(alpha)
     }
     let alpha = SearchResult::Score(i16::MIN + 1); // .neg()をしてもオーバーフローしないように+1
     let beta = SearchResult::Score(i16::MAX);
-    match search(state, alpha, beta, depth) {
+    match search(state, alpha, beta, depth, time_keeper)? {
         SearchResult::Score(_) => unimplemented!("stateから遷移できる状態がない"),
-        SearchResult::ScoreAndAction(_, action) => action,
+        SearchResult::ScoreAndAction(_, action) => Some(action),
     }
+}
+
+fn iterative_deepening_action(state: &AlternateMazeState, threshold: Duration) -> Action {
+    let time_keeper = TimeKeeper::new(threshold);
+    let mut best_action = None;
+    for depth in 1.. {
+        if let Some(action) = alpha_beta_action(state, depth, &time_keeper) {
+            best_action = Some(action);
+        } else {
+            return best_action.unwrap_or_else(|| panic!("深さ1の探索でも時間切れ"));
+        }
+    }
+    unreachable!()
 }
 
 trait ChooseAction {
@@ -333,7 +378,6 @@ fn play(
 }
 
 fn main() {
-    let (h, w, end_turn) = (3, 3, 4);
     struct Random {}
     impl ChooseAction for Random {
         fn choose(&self, state: &AlternateMazeState) -> Action {
@@ -354,16 +398,50 @@ fn main() {
     }
     impl ChooseAction for AlphaBeta {
         fn choose(&self, state: &AlternateMazeState) -> Action {
-            alpha_beta_action(state, self.depth)
+            alpha_beta_action(
+                state,
+                self.depth,
+                &TimeKeeper::new(Duration::from_millis(10)),
+            )
+            .unwrap_or_else(|| panic!("thresholdを調節する"))
         }
     }
+    struct IterativeDeepening {
+        threshold: Duration,
+    }
+    impl ChooseAction for IterativeDeepening {
+        fn choose(&self, state: &AlternateMazeState) -> Action {
+            iterative_deepening_action(state, self.threshold)
+        }
+    }
+
+    let (h, w, end_turn) = (3, 3, 4);
+
     let random = Box::new(Random {});
     let mini_max = Box::new(MiniMax { depth: end_turn });
     let alpha_beta = Box::new(AlphaBeta { depth: end_turn });
+    let short_iterative_deepening = Box::new(IterativeDeepening {
+        threshold: Duration::from_millis(1),
+    });
+    let long_iterative_deepening = Box::new(IterativeDeepening {
+        threshold: Duration::from_millis(100),
+    });
 
     println!("random vs. mini_max");
     play(random, mini_max.clone(), 100, h, w, end_turn, 12345);
 
     println!("mini_max vs. alpha_beta");
     play(mini_max, alpha_beta, 100, h, w, end_turn, 67);
+
+    let (h, w, end_turn) = (5, 5, 10);
+    println!("[iterative deepening] short vs. long");
+    play(
+        short_iterative_deepening,
+        long_iterative_deepening,
+        10,
+        h,
+        w,
+        end_turn,
+        89,
+    );
 }
