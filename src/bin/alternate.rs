@@ -171,7 +171,9 @@ impl fmt::Debug for AlternateMazeState {
                 };
                 write!(f, "{c}")?;
             }
-            writeln!(f)?;
+            if y + 1 < self.point.len() {
+                writeln!(f)?;
+            }
         }
         Ok(())
     }
