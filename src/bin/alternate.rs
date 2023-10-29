@@ -38,6 +38,18 @@ impl Action {
     }
 }
 
+impl fmt::Display for Action {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let c = match self {
+            Action::Right => '>',
+            Action::Left => '<',
+            Action::Down => 'v',
+            Action::Up => '^',
+        };
+        write!(f, "{}", c)
+    }
+}
+
 enum WinningStatus {
     Win,
     Draw,
