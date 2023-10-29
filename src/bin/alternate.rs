@@ -205,6 +205,70 @@ fn mini_max_action(state: &AlternateMazeState, depth: u32) -> Action {
     }
 }
 
+fn alpha_beta_action(state: &AlternateMazeState, depth: u32) -> Action {
+    #[derive(Clone, Copy)]
+    enum SearchResult {
+        Score(i16),
+        ScoreAndAction(i16, Action),
+    }
+    impl SearchResult {
+        fn neg(self) -> Self {
+            match self {
+                SearchResult::Score(s) => SearchResult::Score(-s),
+                SearchResult::ScoreAndAction(s, a) => SearchResult::ScoreAndAction(-s, a),
+            }
+        }
+        fn score(&self) -> i16 {
+            match self {
+                SearchResult::Score(s) => *s,
+                SearchResult::ScoreAndAction(s, _) => *s,
+            }
+        }
+    }
+    fn search(
+        s: &AlternateMazeState,
+        alpha: SearchResult,
+        beta: SearchResult,
+        d: u32,
+    ) -> SearchResult {
+        if s.done() || d == 0 {
+            return SearchResult::Score(s.score());
+        }
+        let legal_actions = s.legal_actions();
+        if legal_actions.is_empty() {
+            return SearchResult::Score(s.score());
+        }
+        let mut alpha = alpha;
+        for action in legal_actions {
+            let mut next_s = s.clone();
+            next_s.advance(action);
+            let score = search(&next_s, beta.neg(), alpha.neg(), d - 1)
+                .neg()
+                .score();
+            let score_and_action = SearchResult::ScoreAndAction(score, action);
+            alpha = match alpha {
+                SearchResult::Score(_) => score_and_action,
+                SearchResult::ScoreAndAction(b, _) if b < score => score_and_action,
+                _ => alpha,
+            };
+            // βカット
+            // 親ノードではbeta.score()を最小化する
+            // このノードのスコアはalpha.score()以上が確定している
+            // これ以上探索してもbeta.score()を更新できないので枝刈り
+            if alpha.score() >= beta.score() {
+                return alpha;
+            }
+        }
+        alpha
+    }
+    let alpha = SearchResult::Score(i16::MIN + 1); // .neg()をしてもオーバーフローしないように+1
+    let beta = SearchResult::Score(i16::MAX);
+    match search(state, alpha, beta, depth) {
+        SearchResult::Score(_) => unimplemented!("stateから遷移できる状態がない"),
+        SearchResult::ScoreAndAction(_, action) => action,
+    }
+}
+
 trait ChooseAction {
     fn choose(&self, state: &AlternateMazeState) -> Action;
 }
@@ -250,9 +314,10 @@ fn play(
     }
 
     println!(
-        "alice = {}, bob = {}",
+        "alice = {}, bob = {}, even = {}",
         f64::from(win[0]) / f64::from(games * 2),
-        f64::from(win[1]) / f64::from(games * 2)
+        f64::from(win[1]) / f64::from(games * 2),
+        f64::from(games * 2 - win[0] - win[1]) / f64::from(games * 2),
     );
 }
 
@@ -264,6 +329,7 @@ fn main() {
             random_action(state)
         }
     }
+    #[derive(Clone)]
     struct MiniMax {
         depth: u32,
     }
@@ -272,7 +338,21 @@ fn main() {
             mini_max_action(state, self.depth)
         }
     }
+    struct AlphaBeta {
+        depth: u32,
+    }
+    impl ChooseAction for AlphaBeta {
+        fn choose(&self, state: &AlternateMazeState) -> Action {
+            alpha_beta_action(state, self.depth)
+        }
+    }
     let random = Box::new(Random {});
     let mini_max = Box::new(MiniMax { depth: end_turn });
-    play(random, mini_max, 100, h, w, end_turn, 12345);
+    let alpha_beta = Box::new(AlphaBeta { depth: end_turn });
+
+    println!("random vs. mini_max");
+    play(random, mini_max.clone(), 100, h, w, end_turn, 12345);
+
+    println!("mini_max vs. alpha_beta");
+    play(mini_max, alpha_beta, 100, h, w, end_turn, 67);
 }
