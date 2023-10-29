@@ -298,30 +298,27 @@ fn play(
 ) {
     let players = [alice, bob];
     let mut rng = SmallRng::seed_from_u64(seed);
-    let mut win = [0, 0];
+    let mut win = [0, 0]; // alice, bob
     for _ in 0..games {
         let state = AlternateMazeState::new(h, w, end_turn, &mut rng);
         // alice先手、後手を両方プレイ
         for i in [0, 1] {
             let mut state = state.clone();
             loop {
+                let current = if state.turn % 2 == 0 { i } else { i ^ 1 };
                 if let Some(status) = state.winning_status() {
                     match status {
                         WinningStatus::Win => {
-                            win[i] += 1;
+                            win[current] += 1;
                         }
                         WinningStatus::Lose => {
-                            win[i ^ 1] += 1;
+                            win[current ^ 1] += 1;
                         }
                         _ => {}
                     }
                     break;
                 }
-                let action = if state.turn % 2 == 0 {
-                    players[i].choose(&state)
-                } else {
-                    players[i ^ 1].choose(&state)
-                };
+                let action = players[current].choose(&state);
                 state.advance(action);
             }
         }
