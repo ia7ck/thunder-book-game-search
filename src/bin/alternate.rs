@@ -328,20 +328,22 @@ fn iterative_deepening_action(state: &AlternateMazeState, threshold: Duration) -
     unreachable!()
 }
 
-fn primitive_montecarlo_action(state: &AlternateMazeState, playout_number: usize) -> Action {
-    fn playout(state: &mut AlternateMazeState) -> f64 {
-        match state.winning_status() {
-            Some(status) => match status {
-                WinningStatus::Win => 1.0,
-                WinningStatus::Draw => 0.5,
-                WinningStatus::Lose => 0.0,
-            },
-            None => {
-                state.advance(random_action(state));
-                1.0 - playout(state)
-            }
+// montecarlo
+fn playout(state: &mut AlternateMazeState) -> f64 {
+    match state.winning_status() {
+        Some(status) => match status {
+            WinningStatus::Win => 1.0,
+            WinningStatus::Draw => 0.5,
+            WinningStatus::Lose => 0.0,
+        },
+        None => {
+            state.advance(random_action(state));
+            1.0 - playout(state)
         }
     }
+}
+
+fn primitive_montecarlo_action(state: &AlternateMazeState, playout_number: usize) -> Action {
     let legal_actions = state.legal_actions();
     let mut values = vec![0.0; legal_actions.len()];
     let mut counts = vec![0; legal_actions.len()];
@@ -360,6 +362,106 @@ fn primitive_montecarlo_action(state: &AlternateMazeState, playout_number: usize
         })
         .unwrap();
     legal_actions[arg_max]
+}
+
+struct Node {
+    state: AlternateMazeState,
+    attempt: u32,
+    win: f64,
+    child_nodes: Vec<Node>,
+}
+
+impl Node {
+    fn new(state: AlternateMazeState) -> Self {
+        Self {
+            state,
+            attempt: 0,
+            win: 0.0,
+            child_nodes: Vec::new(),
+        }
+    }
+
+    fn expand(&mut self, legal_actions: &Vec<Action>) {
+        assert!(self.child_nodes.is_empty());
+        for &action in legal_actions {
+            let mut next_state = self.state.clone();
+            next_state.advance(action);
+            self.child_nodes.push(Node::new(next_state));
+        }
+    }
+
+    fn evaluate(&mut self) -> f64 {
+        if let Some(status) = self.state.winning_status() {
+            let value = match status {
+                WinningStatus::Win => 1.0,
+                WinningStatus::Draw => 0.5,
+                WinningStatus::Lose => 0.0,
+            };
+            self.win += value;
+            self.attempt += 1;
+            value
+        } else if self.child_nodes.is_empty() {
+            const EXPAND_THRESHOLD: u32 = 10;
+            let mut state = self.state.clone();
+            let value = playout(&mut state);
+            self.win += value;
+            self.attempt += 1;
+            if self.attempt == EXPAND_THRESHOLD {
+                self.expand(&self.state.legal_actions());
+            }
+            value
+        } else {
+            fn ucb1(child: &Node, t: u32) -> f64 {
+                const C: f64 = 1.0;
+                assert_ne!(child.attempt, 0);
+                let attempt = f64::from(child.attempt);
+                // child.win / attempt は子視点の勝率
+                // self 視点の勝率にするために 1.0 から引く
+                (1.0 - child.win / attempt) + C * f64::sqrt(2.0 * f64::from(t).ln() / attempt)
+            }
+            let index = 'next_child_node_index: {
+                for (i, node) in self.child_nodes.iter().enumerate() {
+                    // 一度も探索していないノードは最優先
+                    if node.attempt == 0 {
+                        break 'next_child_node_index i;
+                    }
+                }
+                let t = self
+                    .child_nodes
+                    .iter()
+                    .map(|node| node.attempt)
+                    .sum::<u32>();
+                (0..self.child_nodes.len())
+                    .max_by(|&i, &j| {
+                        let left = ucb1(&self.child_nodes[i], t);
+                        let right = ucb1(&self.child_nodes[j], t);
+                        left.total_cmp(&right)
+                    })
+                    .unwrap()
+            };
+            let value = 1.0 - self.child_nodes[index].evaluate();
+            self.win += value;
+            self.attempt += 1;
+            value
+        }
+    }
+}
+
+fn mcts_action(state: &AlternateMazeState, playout_number: usize) -> Action {
+    let mut root = Node::new(state.clone());
+    let legal_actions = state.legal_actions();
+    root.expand(&legal_actions);
+    for _ in 0..playout_number {
+        root.evaluate();
+    }
+    // legal_actions[i] と root.child_nodes[i] が対応している
+    assert_eq!(legal_actions.len(), root.child_nodes.len());
+    let (action, _) = legal_actions
+        .into_iter()
+        .zip(root.child_nodes)
+        .max_by_key(|(_, node)| node.attempt)
+        .unwrap();
+    action
 }
 
 trait ChooseAction {
@@ -458,6 +560,16 @@ fn main() {
             primitive_montecarlo_action(state, self.playout_number)
         }
     }
+    #[allow(clippy::upper_case_acronyms)]
+    #[derive(Clone)]
+    struct MCTS {
+        playout_number: usize,
+    }
+    impl ChooseAction for MCTS {
+        fn choose(&self, state: &AlternateMazeState) -> Action {
+            mcts_action(state, self.playout_number)
+        }
+    }
 
     let (h, w, end_turn) = (3, 3, 4);
 
@@ -472,6 +584,10 @@ fn main() {
     });
     let small_primitive_montecarlo = Box::new(PrimitiveMontecarlo { playout_number: 30 });
     let large_primitive_montecarlo = Box::new(PrimitiveMontecarlo {
+        playout_number: 3000,
+    });
+    let small_mcts = Box::new(MCTS { playout_number: 30 });
+    let large_mcts = Box::new(MCTS {
         playout_number: 3000,
     });
 
@@ -507,12 +623,34 @@ fn main() {
 
     println!("[primitive montecarlo] small vs. large");
     play(
-        small_primitive_montecarlo,
-        large_primitive_montecarlo,
+        small_primitive_montecarlo.clone(),
+        large_primitive_montecarlo.clone(),
         100,
         h,
         w,
         end_turn,
         876,
+    );
+
+    println!("primitive montecarlo vs. mcts");
+    play(
+        large_primitive_montecarlo,
+        large_mcts.clone(),
+        100,
+        h,
+        w,
+        end_turn,
+        54,
+    );
+
+    println!("[mcts] small vs. large");
+    play(
+        small_mcts.clone(),
+        large_mcts.clone(),
+        100,
+        h,
+        w,
+        end_turn,
+        3,
     );
 }
