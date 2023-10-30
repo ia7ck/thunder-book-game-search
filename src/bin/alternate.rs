@@ -328,6 +328,40 @@ fn iterative_deepening_action(state: &AlternateMazeState, threshold: Duration) -
     unreachable!()
 }
 
+fn primitive_montecarlo_action(state: &AlternateMazeState, playout_number: usize) -> Action {
+    fn playout(state: &mut AlternateMazeState) -> f64 {
+        match state.winning_status() {
+            Some(status) => match status {
+                WinningStatus::Win => 1.0,
+                WinningStatus::Draw => 0.5,
+                WinningStatus::Lose => 0.0,
+            },
+            None => {
+                state.advance(random_action(state));
+                1.0 - playout(state)
+            }
+        }
+    }
+    let legal_actions = state.legal_actions();
+    let mut values = vec![0.0; legal_actions.len()];
+    let mut counts = vec![0; legal_actions.len()];
+    for i in 0..playout_number {
+        let i = i % legal_actions.len();
+        let mut next_state = state.clone();
+        next_state.advance(legal_actions[i]);
+        values[i] += 1.0 - playout(&mut next_state);
+        counts[i] += 1;
+    }
+    let arg_max = (0..legal_actions.len())
+        .max_by(|&i, &j| {
+            let left = values[i] / f64::from(counts[i]);
+            let right = values[j] / f64::from(counts[j]);
+            left.total_cmp(&right)
+        })
+        .unwrap();
+    legal_actions[arg_max]
+}
+
 trait ChooseAction {
     fn choose(&self, state: &AlternateMazeState) -> Action;
 }
@@ -378,6 +412,7 @@ fn play(
 }
 
 fn main() {
+    #[derive(Clone)]
     struct Random {}
     impl ChooseAction for Random {
         fn choose(&self, state: &AlternateMazeState) -> Action {
@@ -414,6 +449,15 @@ fn main() {
             iterative_deepening_action(state, self.threshold)
         }
     }
+    #[derive(Clone)]
+    struct PrimitiveMontecarlo {
+        playout_number: usize,
+    }
+    impl ChooseAction for PrimitiveMontecarlo {
+        fn choose(&self, state: &AlternateMazeState) -> Action {
+            primitive_montecarlo_action(state, self.playout_number)
+        }
+    }
 
     let (h, w, end_turn) = (3, 3, 4);
 
@@ -426,9 +470,13 @@ fn main() {
     let long_iterative_deepening = Box::new(IterativeDeepening {
         threshold: Duration::from_millis(100),
     });
+    let small_primitive_montecarlo = Box::new(PrimitiveMontecarlo { playout_number: 30 });
+    let large_primitive_montecarlo = Box::new(PrimitiveMontecarlo {
+        playout_number: 3000,
+    });
 
     println!("random vs. mini_max");
-    play(random, mini_max.clone(), 100, h, w, end_turn, 12345);
+    play(random.clone(), mini_max.clone(), 100, h, w, end_turn, 12345);
 
     println!("mini_max vs. alpha_beta");
     play(mini_max, alpha_beta, 100, h, w, end_turn, 67);
@@ -443,5 +491,28 @@ fn main() {
         w,
         end_turn,
         89,
+    );
+
+    let (h, w, end_turn) = (3, 3, 4);
+    println!("random vs. primitive montecarlo");
+    play(
+        random,
+        large_primitive_montecarlo.clone(),
+        100,
+        h,
+        w,
+        end_turn,
+        9,
+    );
+
+    println!("[primitive montecarlo] small vs. large");
+    play(
+        small_primitive_montecarlo,
+        large_primitive_montecarlo,
+        100,
+        h,
+        w,
+        end_turn,
+        876,
     );
 }
