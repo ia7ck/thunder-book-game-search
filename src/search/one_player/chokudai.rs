@@ -45,7 +45,6 @@ where
                     for action in legal_actions {
                         let mut next_state = now_state.clone();
                         next_state.advance(action);
-                        next_state.evaluate_score();
                         heaps[t + 1].push((next_state, first_action.or(Some(action))));
                     }
                 }
