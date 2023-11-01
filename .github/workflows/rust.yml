@@ -21,9 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt
+    - name: Add rustfmt
+      run: rustup component add rustfmt
     - name: Check format
       run: cargo fmt --check
 
@@ -31,8 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
+    - name: Add clippy
+      run: rustup component add clippy
     - name: Clippy
       run: cargo clippy
