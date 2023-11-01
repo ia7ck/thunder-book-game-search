@@ -7,6 +7,7 @@ pub trait AlternateGameState: Clone {
     fn winning_status(&self) -> Option<WinningStatus>;
 }
 
+#[derive(Clone, Copy)]
 pub enum WinningStatus {
     Win,
     Draw,
