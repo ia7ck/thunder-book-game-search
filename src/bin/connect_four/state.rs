@@ -95,7 +95,7 @@ impl AlternateGameState for ConnectFourState {
             upper_right + lower_left
         };
         // 縦
-        let tate = down().take_while(|&y| self.my_board[y][action.x]).count();
+        let tate = 1 + down().take_while(|&y| self.my_board[y][action.x]).count();
 
         mem::swap(&mut self.my_board, &mut self.enemy_board);
         if yoko >= 4 || naname >= 4 || menana >= 4 || tate >= 4 {
