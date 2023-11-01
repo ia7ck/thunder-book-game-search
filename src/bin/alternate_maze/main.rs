@@ -59,7 +59,6 @@ where
     A: ChooseAction<AlternateMazeState>,
     B: ChooseAction<AlternateMazeState>,
 {
-    // let players = [alice, bob];
     let mut rng = SmallRng::seed_from_u64(seed);
     let (mut win_alice, mut win_bob) = (0, 0);
     for _ in 0..games {
