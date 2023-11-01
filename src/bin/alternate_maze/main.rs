@@ -98,12 +98,12 @@ fn main() {
     let random = Random {};
     let mini_max = MiniMax::new(end_turn);
     let alpha_beta = AlphaBeta::new(end_turn, Duration::from_millis(10));
-    let short_iterative_deepening = IterativeDeepeningAlphaBeta::new(Duration::from_millis(1));
-    let long_iterative_deepening = IterativeDeepeningAlphaBeta::new(Duration::from_millis(100));
-    let small_primitive_montecarlo = PrimitiveMontecarlo::new(30);
-    let large_primitive_montecarlo = PrimitiveMontecarlo::new(3000);
-    let small_mcts = MCTS::new(30);
-    let large_mcts = MCTS::new(3000);
+    let short_iterative_deepening = IterativeDeepeningAlphaBeta::new(Duration::from_micros(10));
+    let long_iterative_deepening = IterativeDeepeningAlphaBeta::new(Duration::from_micros(1000));
+    let short_primitive_montecarlo = PrimitiveMontecarlo::new(Duration::from_micros(10));
+    let long_primitive_montecarlo = PrimitiveMontecarlo::new(Duration::from_micros(1000));
+    let short_mcts = MCTS::new(Duration::from_micros(10));
+    let long_mcts = MCTS::new(Duration::from_micros(1000));
 
     println!("random vs. mini_max");
     play(&random, &mini_max, games, h, w, end_turn, 12345);
@@ -127,7 +127,7 @@ fn main() {
     println!("random vs. primitive montecarlo");
     play(
         &random,
-        &large_primitive_montecarlo,
+        &short_primitive_montecarlo,
         games,
         h,
         w,
@@ -135,10 +135,10 @@ fn main() {
         9,
     );
 
-    println!("[primitive montecarlo] small vs. large");
+    println!("[primitive montecarlo] short vs. long");
     play(
-        &small_primitive_montecarlo,
-        &large_primitive_montecarlo,
+        &short_primitive_montecarlo,
+        &long_primitive_montecarlo,
         games,
         h,
         w,
@@ -148,8 +148,8 @@ fn main() {
 
     println!("primitive montecarlo vs. mcts");
     play(
-        &large_primitive_montecarlo,
-        &large_mcts,
+        &long_primitive_montecarlo,
+        &long_mcts,
         games,
         h,
         w,
@@ -157,6 +157,6 @@ fn main() {
         54,
     );
 
-    println!("[mcts] small vs. large");
-    play(&small_mcts, &large_mcts, games, h, w, end_turn, 3);
+    println!("[mcts] short vs. long");
+    play(&short_mcts, &long_mcts, games, h, w, end_turn, 3);
 }

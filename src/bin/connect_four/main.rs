@@ -1,5 +1,7 @@
 mod state;
 
+use ::std::time::Duration;
+
 use ::thunder_book_game_search::{
     game::alternate::{AlternateGameState, WinningStatus},
     search::alternate::{mcts::MCTS, random::Random, ChooseAction},
@@ -81,7 +83,7 @@ fn main() {
     let (games, h, w) = (100, 6, 7);
 
     let random = Random {};
-    let mcts = MCTS::new(50);
+    let mcts = MCTS::new(Duration::from_micros(100));
 
     println!("random vs. random");
     play(&random, &random, games, h, w);

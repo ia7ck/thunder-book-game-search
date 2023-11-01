@@ -1,16 +1,19 @@
+use ::std::time::Duration;
+
 use crate::{
     game::alternate::{AlternateGameState, WinningStatus},
     search::alternate::{primitive_montecarlo::playout, ChooseAction},
+    TimeKeeper,
 };
 
 #[allow(clippy::upper_case_acronyms)]
 pub struct MCTS {
-    playout_number: usize,
+    threshold: Duration,
 }
 
 impl MCTS {
-    pub fn new(playout_number: usize) -> Self {
-        Self { playout_number }
+    pub fn new(threshold: Duration) -> Self {
+        Self { threshold }
     }
 }
 
@@ -19,10 +22,14 @@ where
     S: AlternateGameState,
 {
     fn choose(&self, state: &S) -> <S as AlternateGameState>::Action {
+        let time_keeper = TimeKeeper::new(self.threshold);
         let mut root = Node::new(state.clone());
         let legal_actions = state.legal_actions();
         root.expand(&legal_actions);
-        for _ in 0..self.playout_number {
+        for _ in 0.. {
+            if time_keeper.time_over() {
+                break;
+            }
             root.evaluate();
         }
         // legal_actions[i] と root.child_nodes[i] が対応している

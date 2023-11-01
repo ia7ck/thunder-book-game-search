@@ -1,15 +1,18 @@
+use ::std::time::Duration;
+
 use crate::{
     game::alternate::{AlternateGameState, WinningStatus},
     search::alternate::{random::Random, ChooseAction},
+    TimeKeeper,
 };
 
 pub struct PrimitiveMontecarlo {
-    playout_number: usize,
+    threshold: Duration,
 }
 
 impl PrimitiveMontecarlo {
-    pub fn new(playout_number: usize) -> Self {
-        Self { playout_number }
+    pub fn new(threshold: Duration) -> Self {
+        Self { threshold }
     }
 }
 
@@ -18,10 +21,14 @@ where
     S: AlternateGameState,
 {
     fn choose(&self, state: &S) -> S::Action {
+        let time_keeper = TimeKeeper::new(self.threshold);
         let legal_actions = state.legal_actions();
         let mut values = vec![0.0; legal_actions.len()];
         let mut counts = vec![0; legal_actions.len()];
-        for i in 0..self.playout_number {
+        for i in 0.. {
+            if time_keeper.time_over() {
+                break;
+            }
             let i = i % legal_actions.len();
             let mut next_state = state.clone();
             next_state.advance(legal_actions[i]);
