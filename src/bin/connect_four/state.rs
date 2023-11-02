@@ -58,21 +58,21 @@ impl AlternateGameState for ConnectFourState {
             .unwrap_or_else(|| panic!("{}列目が埋まっている", action.x));
         self.my_board[piece_y][action.x] = true;
 
-        let left = || (0..action.x).rev();
+        let left = || (0..=action.x).rev();
         let right = || action.x..self.w;
         let up = || piece_y..self.h;
-        let down = || (0..piece_y).rev();
+        let down = || (0..=piece_y).rev();
 
         // 横
         let yoko = {
             let left = left().take_while(|&x| self.my_board[piece_y][x]).count();
             let right = right().take_while(|&x| self.my_board[piece_y][x]).count();
-            left + right
+            // (piece_y, x) を二重に数えてるので -1
+            left + right - 1
         };
         // 左上から右下
         let naname = {
             let upper_left = up()
-                .clone()
                 .zip(left())
                 .take_while(|&(y, x)| self.my_board[y][x])
                 .count();
@@ -80,7 +80,7 @@ impl AlternateGameState for ConnectFourState {
                 .zip(right())
                 .take_while(|&(y, x)| self.my_board[y][x])
                 .count();
-            upper_left + lower_right
+            upper_left + lower_right - 1
         };
         // 右上から左下
         let menana = {
@@ -92,10 +92,10 @@ impl AlternateGameState for ConnectFourState {
                 .zip(left())
                 .take_while(|&(y, x)| self.my_board[y][x])
                 .count();
-            upper_right + lower_left
+            upper_right + lower_left - 1
         };
         // 縦
-        let tate = 1 + down().take_while(|&y| self.my_board[y][action.x]).count();
+        let tate = down().take_while(|&y| self.my_board[y][action.x]).count();
 
         mem::swap(&mut self.my_board, &mut self.enemy_board);
         if yoko >= 4 || naname >= 4 || menana >= 4 || tate >= 4 {
