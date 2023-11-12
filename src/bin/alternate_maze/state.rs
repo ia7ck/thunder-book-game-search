@@ -126,6 +126,18 @@ impl AlternateGameState for AlternateMazeState {
         self.characters[0].game_score - self.characters[1].game_score
     }
 
+    fn score_rate(&self) -> f64 {
+        let score_0 = self.characters[0].game_score;
+        let score_1 = self.characters[1].game_score;
+        if score_0 + score_1 == 0 {
+            assert_eq!(score_0, 0);
+            assert_eq!(score_1, 0);
+            0.0 // 0.5 のほうがいい？
+        } else {
+            f64::from(score_0) / f64::from(score_0 + score_1)
+        }
+    }
+
     fn winning_status(&self) -> Option<WinningStatus> {
         use ::std::cmp::Ordering::*;
         if self.done() {

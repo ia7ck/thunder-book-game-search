@@ -4,6 +4,7 @@ pub mod mcts;
 pub mod mini_max;
 pub mod primitive_montecarlo;
 pub mod random;
+pub mod thuder;
 
 use crate::game::alternate::AlternateGameState;
 

@@ -6,6 +6,9 @@ pub trait AlternateGameState: Clone {
     fn score(&self) -> i16 {
         unimplemented!("盤面評価を必要とするαβ探索などのために実装する")
     }
+    fn score_rate(&self) -> f64 {
+        unimplemented!("Thunderサーチ")
+    }
     fn winning_status(&self) -> Option<WinningStatus>;
 }
 

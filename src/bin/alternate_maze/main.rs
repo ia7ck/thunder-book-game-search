@@ -9,7 +9,7 @@ use ::thunder_book_game_search::{
     search::alternate::{
         alpha_beta::AlphaBeta, iterative_deepening_alpha_beta::IterativeDeepeningAlphaBeta,
         mcts::MCTS, mini_max::MiniMax, primitive_montecarlo::PrimitiveMontecarlo, random::Random,
-        ChooseAction,
+        thuder::Thunder, ChooseAction,
     },
 };
 
@@ -104,6 +104,7 @@ fn main() {
     let long_primitive_montecarlo = PrimitiveMontecarlo::new(Duration::from_micros(1000));
     let short_mcts = MCTS::new(Duration::from_micros(10));
     let long_mcts = MCTS::new(Duration::from_micros(1000));
+    let thunder = Thunder::new(Duration::from_micros(1000));
 
     println!("random vs. mini_max");
     play(&random, &mini_max, games, h, w, end_turn, 12345);
@@ -159,4 +160,19 @@ fn main() {
 
     println!("[mcts] short vs. long");
     play(&short_mcts, &long_mcts, games, h, w, end_turn, 3);
+
+    let (games, h, w, end_turn) = (100, 10, 10, 50);
+    println!("mcts vs. thunder");
+    play(&long_mcts, &thunder, games, h, w, end_turn, 3);
+
+    println!("iterative deepening vs. thunder"); // なぜか iterative deepening のほうが強い？？　Thunder サーチがバグってるかも
+    play(
+        &long_iterative_deepening,
+        &thunder,
+        games,
+        h,
+        w,
+        end_turn,
+        21,
+    );
 }
