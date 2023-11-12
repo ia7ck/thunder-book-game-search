@@ -93,7 +93,7 @@ where
 }
 
 fn main() {
-    let (games, h, w, end_turn) = (100, 3, 3, 4);
+    let (games, h, w, end_turn, seed) = (100, 3, 3, 4, 12345);
 
     let random = Random {};
     let mini_max = MiniMax::new(end_turn);
@@ -107,10 +107,10 @@ fn main() {
     let thunder = Thunder::new(Duration::from_micros(1000));
 
     println!("random vs. mini_max");
-    play(&random, &mini_max, games, h, w, end_turn, 12345);
+    play(&random, &mini_max, games, h, w, end_turn, seed);
 
     println!("mini_max vs. alpha_beta");
-    play(&mini_max, &alpha_beta, games, h, w, end_turn, 67);
+    play(&mini_max, &alpha_beta, games, h, w, end_turn, seed);
 
     let (games, h, w, end_turn) = (10, 5, 5, 10);
     println!("[iterative deepening] short vs. long");
@@ -121,7 +121,7 @@ fn main() {
         h,
         w,
         end_turn,
-        89,
+        seed,
     );
 
     let (games, h, w, end_turn) = (100, 3, 3, 4);
@@ -133,7 +133,7 @@ fn main() {
         h,
         w,
         end_turn,
-        9,
+        seed,
     );
 
     println!("[primitive montecarlo] short vs. long");
@@ -144,7 +144,7 @@ fn main() {
         h,
         w,
         end_turn,
-        876,
+        seed,
     );
 
     println!("primitive montecarlo vs. mcts");
@@ -155,15 +155,15 @@ fn main() {
         h,
         w,
         end_turn,
-        54,
+        seed,
     );
 
     println!("[mcts] short vs. long");
-    play(&short_mcts, &long_mcts, games, h, w, end_turn, 3);
+    play(&short_mcts, &long_mcts, games, h, w, end_turn, seed);
 
     let (games, h, w, end_turn) = (100, 10, 10, 50);
     println!("mcts vs. thunder");
-    play(&long_mcts, &thunder, games, h, w, end_turn, 3);
+    play(&long_mcts, &thunder, games, h, w, end_turn, seed);
 
     println!("iterative deepening vs. thunder"); // なぜか iterative deepening のほうが強い？？　Thunder サーチがバグってるかも
     play(
@@ -173,6 +173,6 @@ fn main() {
         h,
         w,
         end_turn,
-        21,
+        seed,
     );
 }
