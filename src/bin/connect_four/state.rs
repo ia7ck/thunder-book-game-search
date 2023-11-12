@@ -110,10 +110,6 @@ impl AlternateGameState for ConnectFourState {
         self.winning_status_cache.is_some()
     }
 
-    fn score(&self) -> i16 {
-        unimplemented!()
-    }
-
     fn winning_status(&self) -> Option<WinningStatus> {
         self.winning_status_cache
     }
