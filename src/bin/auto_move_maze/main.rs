@@ -4,7 +4,9 @@ use ::rand::{rngs::SmallRng, SeedableRng};
 
 use ::thunder_book_game_search::{
     game::heuristic::HeuristicGameState,
-    search::heuristic::{hill_climb::HillClimb, random::Random, ChooseState},
+    search::heuristic::{
+        hill_climb::HillClimb, random::Random, simulated_annealing::SimulatedAnnealing, ChooseState,
+    },
 };
 
 use crate::state::AutoMoveMazeState;
@@ -36,6 +38,7 @@ fn main() {
 
     let random = Random {};
     let hill_climb = HillClimb::new(10_000);
+    let simulated_annealing = SimulatedAnnealing::new(10_000, 500.0, 10.0);
 
     println!(
         "random: {}",
@@ -45,5 +48,18 @@ fn main() {
     println!(
         "hill climb: {}",
         average_score(hill_climb, games, h, w, end_turn, character_num, seed)
+    );
+
+    println!(
+        "simulated annealing: {}",
+        average_score(
+            simulated_annealing,
+            games,
+            h,
+            w,
+            end_turn,
+            character_num,
+            seed
+        )
     );
 }

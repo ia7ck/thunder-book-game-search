@@ -1,5 +1,6 @@
 pub mod hill_climb;
 pub mod random;
+pub mod simulated_annealing;
 
 use crate::game::heuristic::HeuristicGameState;
 
