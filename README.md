@@ -1,7 +1,5 @@
 『ゲームで学ぶ探索アルゴリズム実践入門』 https://gihyo.jp/book/2023/978-4-297-13360-3
 
-# Progress
-
 ## 文脈のある一人ゲーム
 
 ```
@@ -15,9 +13,13 @@ $ cargo run --bin one_player_maze --release
 
 ## 文脈のない一人ゲーム
 
-- [ ] ランダム
-- [ ] 山登り
-- [ ] 焼きなまし
+```
+$ cargo run --bin auto_move_maze --release
+```
+
+- [x] ランダム
+- [x] 山登り
+- [x] 焼きなまし
 
 ## 交互着手二人ゲーム
 
@@ -31,7 +33,7 @@ $ cargo run --bin alternate_maze --release
 - [x] 反復深化
 - [x] 原始モンテカルロ法
 - [x] MCTS (モンテカルロ木探索)
-- [ ] Thunderサーチ
+- [x] Thunderサーチ
 
 ## 同時着手二人ゲーム
 
