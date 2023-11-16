@@ -113,6 +113,15 @@ impl HeuristicGameState for AutoMoveMazeState {
         }
         state.game_score
     }
+
+    fn transition(&mut self) {
+        let mut rng = thread_rng();
+        let i = rng.gen_range(0..self.characters.len());
+        let new_y = rng.gen_range(0..self.point.len());
+        let new_x = rng.gen_range(0..self.point[new_y].len());
+        self.characters[i].y = new_y;
+        self.characters[i].x = new_x;
+    }
 }
 
 impl fmt::Debug for AutoMoveMazeState {

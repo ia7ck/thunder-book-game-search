@@ -3,4 +3,6 @@ pub trait HeuristicGameState: Clone {
     fn initialize(&mut self);
     // ゲームを最後まで進めてスコアを返す
     fn start(&self) -> u32;
+    // 近傍へ移る
+    fn transition(&mut self);
 }

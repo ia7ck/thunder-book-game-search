@@ -1,3 +1,4 @@
+pub mod hill_climb;
 pub mod random;
 
 use crate::game::heuristic::HeuristicGameState;
